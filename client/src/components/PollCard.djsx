@@ -1,0 +1,136 @@
+
+
+import { useState, useEffect } from "react";
+import api from "../api/axios";
+import {toast }from "react-toastify"
+
+export default function PollCard({ poll, refresh }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [voted, setVoted] = useState(false);
+
+ 
+  useEffect(() => {
+  const interval = setInterval(() => {
+    const now = new Date();
+    const expires = new Date(poll.expiresAt);
+    const diff = expires - now;
+
+    if (diff <= 0) {
+      setTimeLeft("Expired");
+      clearInterval(interval);
+    } else {
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff / (1000 * 60)) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+
+      setTimeLeft(`${h}h ${m}m ${s}s left`);
+    }
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [poll.expiresAt]);
+
+  const vote = async (index) => {
+    try {
+    const res =  await api.post(`/polls/${poll._id}/vote`, { optionIndex: index }, {
+        withCredentials: true
+      });
+      setVoted(true);
+      refresh();
+      console.log(res)
+      toast.success(res.response?.data?.msg)
+      
+    } catch (err) {
+      toast.error(err.response?.data?.msg || "Error voting")
+      console.log(err)
+    }
+  };
+
+
+  const getWinner = () => {
+  if (!poll.options || poll.options.length === 0) return "";
+
+  let winner = poll.options[0];
+
+  poll.options.forEach((opt) => {
+    if (opt.votes > winner.votes) {
+      winner = opt;
+    }
+  });
+
+  return winner.text;
+};
+
+  const isExpired = new Date() > new Date(poll.expiresAt);
+  const totalVotes = poll.options.reduce((sum, o) => sum + o.votes, 0);
+
+  return (
+    <div className="bg-white rounded-xl border p-6 shadow-sm w-full max-w-2xl">
+
+      {/* Header */}
+     
+      
+
+       <div className="mb-3">
+         <span className="text-sm text-gray-500 ">
+          {isExpired ? "Expired" : ` ${timeLeft}`}
+        </span>
+       </div>
+   
+
+      {/* Question */}
+      <h2 className="text-xl font-bold text-gray-800 mb-5">
+        {poll.question}
+      </h2>
+
+      {/* Options */}
+      <div className="space-y-4">
+        {poll.options.map((opt, i) => {
+          const percent = totalVotes
+            ? Math.round((opt.votes / totalVotes) * 100)
+            : 0;
+
+          return (
+            <div key={opt._id}>
+              {/* Label */}
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium text-gray-700">
+                  {opt.text}
+                </span>
+                <span className="text-gray-500">{percent}%</span>
+              </div>
+
+              {/* Progress bar */}
+              <div
+                onClick={() => !isExpired && !voted && vote(i)}
+                className={`h-3 rounded-full bg-gray-200 overflow-hidden cursor-pointer ${
+                  isExpired || voted ? "cursor-not-allowed" : ""
+                }`}
+              >
+                <div
+                  className="h-full bg-blue-600"
+                  style={{ width: `${percent}%` }}
+                ></div>
+              </div>
+
+              {/* Votes */}
+              <p className="text-xs text-gray-400 mt-1">
+                {opt.votes} votes
+              </p>
+            </div>
+            
+          );
+          
+        })}
+      </div>
+
+      {isExpired && (
+  <div className="mt-5 bg-green-100 text-green-700 text-sm font-semibold text-center py-2 rounded-lg">
+    🏆 Winner: {getWinner()}
+  </div>
+)}
+
+     
+    </div>
+  );
+}

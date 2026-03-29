@@ -30,7 +30,6 @@ const getAllUsers = async (req, res) => {
 
 const removePoll = async (req, res) => {
   try {
-    const userid = req.user.id
     await Poll.findByIdAndDelete(req.params.id);
     res.json({ msg: "Poll removed by admin" });
   } catch (err) {

@@ -17,7 +17,7 @@ const registerUser = async (req, res) => {
       password: hashed
     });
 
-    res.json({ msg: "Registered successfully" });
+    res.json({ msg: "Registered successfully", data:user });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
